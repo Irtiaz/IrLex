@@ -6,6 +6,7 @@
 #include "stb_ds.h"
 
 #define MAX_REGEX_CHARS 40
+#define MAX_TOKEN_CHARS 20
 #define BUFFER_SIZE 100
 
 int matchRegex(const regex_t *regex, const char *string);
@@ -22,22 +23,32 @@ void freeLexRule(LexRule *rule);
 
 int main(void) {
     FILE *inputFile;
-    inputFile = fopen("input.txt", "r");
+    FILE *ruleFile;
 
     LexRule **rules = NULL;
     char buffer[BUFFER_SIZE] = {0};
     int bufferIndex = 0;
 
-
-    arrput(rules, createLexRule("NUMBER", "[0-9][0-9]*"));
-    arrput(rules, createLexRule("IF", "if"));
-    arrput(rules, createLexRule("ID", "[a-zA-Z][a-zA-Z0-9_]*"));
-    arrput(rules, createLexRule("WHITESPACE", "."));
+    inputFile = fopen("input.txt", "r");
+    ruleFile = fopen("rules.txt", "r");
 
     if (!inputFile) {
-        fprintf(stderr, "input.txt not found");
+        fprintf(stderr, "input.txt not found\n");
         exit(1);
     }
+
+    if (!ruleFile) {
+        fprintf(stderr, "rules.txt not found\n");
+        exit(1);
+    }
+    
+    while (1) {
+        char tokenName[MAX_TOKEN_CHARS];
+        char regexString[MAX_REGEX_CHARS];
+        int readFlag = fscanf(ruleFile, "%s %s", tokenName, regexString);
+        if (readFlag == EOF) break;
+        arrput(rules, createLexRule(tokenName, regexString));
+    } 
 
     {
         int matchFlag = 0;
@@ -78,6 +89,7 @@ int main(void) {
 
     arrfree(rules);
     fclose(inputFile);
+    fclose(ruleFile);
 
     return 0;
 }
