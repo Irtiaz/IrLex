@@ -10,6 +10,8 @@
 #define MAX_TOKEN_CHARS 20
 #define BUFFER_SIZE 100
 
+#define SKIP_TOKEN "SKIP"
+
 int matchRegex(const regex_t *regex, const char *string);
 regex_t *prepareRegex(const char *regexString);
 
@@ -21,6 +23,8 @@ typedef struct {
 LexRule *createLexRule(const char *tokenName, const char *regexString);
 LexRule *getMatchingLexRule(LexRule **rules, const char *buffer);
 void freeLexRule(LexRule *rule);
+
+void logTokenLexemePair(FILE *logFile, const char *token, const char *lexeme);
 
 int main(int argc, char **argv) {
     FILE *inputFile;
@@ -66,8 +70,10 @@ int main(int argc, char **argv) {
             currentlyMatching = getMatchingLexRule(rules, buffer) != NULL;
 
             if (matchFlag && !currentlyMatching) {
+                char *token;
                 buffer[bufferIndex] = '\0';
-                printf("%s -> %s\n", buffer, getMatchingLexRule(rules, buffer)->token);
+                token = getMatchingLexRule(rules, buffer)->token;
+                if (strcmp(token, SKIP_TOKEN)) logTokenLexemePair(stdout, token, buffer);
 
                 bufferIndex = 0;
                 memset(buffer, '\0', sizeof(buffer));
@@ -83,7 +89,7 @@ int main(int argc, char **argv) {
 
     {
         LexRule *lastRule = getMatchingLexRule(rules, buffer);
-        if (lastRule) printf("%s -> %s\n", buffer, lastRule->token);
+        if (lastRule && strcmp(lastRule->token, SKIP_TOKEN)) logTokenLexemePair(stdout, lastRule->token, buffer);
     }
 
     {
@@ -150,4 +156,8 @@ void freeLexRule(LexRule *rule) {
     free(rule->regex);
     free(rule->token);
     free(rule);
+}
+
+void logTokenLexemePair(FILE *logFile, const char *token, const char *lexeme) {
+    fprintf(logFile, "%s %s\n", token, lexeme);
 }
