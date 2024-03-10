@@ -18,43 +18,50 @@ typedef struct {
 
 LexRule *createLexRule(const char *tokenName, const char *regexString);
 LexRule *getMatchingLexRule(LexRule **rules, const char *buffer);
-void *freeLexRule(LexRule *rule);
+void freeLexRule(LexRule *rule);
 
 int main(void) {
+    FILE *inputFile;
+    inputFile = fopen("input.txt", "r");
+
     LexRule **rules = NULL;
-    const char string[] = "abcd if  \t  xyz 123";
     char buffer[BUFFER_SIZE] = {0};
-    int stringIndex = 0;
     int bufferIndex = 0;
-    
-    int matchFlag = 0;
+
 
     arrput(rules, createLexRule("NUMBER", "[0-9][0-9]*"));
     arrput(rules, createLexRule("IF", "if"));
     arrput(rules, createLexRule("ID", "[a-zA-Z][a-zA-Z0-9_]*"));
     arrput(rules, createLexRule("WHITESPACE", "."));
 
-    while (string[stringIndex]) {
-        int i;
-        int currentlyMatching;
+    if (!inputFile) {
+        fprintf(stderr, "input.txt not found");
+        exit(1);
+    }
 
-        buffer[bufferIndex] = string[stringIndex];
-        currentlyMatching = getMatchingLexRule(rules, buffer) != NULL;
-        
-        if (matchFlag && !currentlyMatching) {
-            buffer[bufferIndex] = '\0';
-            printf("%s -> %s\n", buffer, getMatchingLexRule(rules, buffer)->token);
+    {
+        int matchFlag = 0;
+        char c = fgetc(inputFile);
+        while (c != EOF) {
+            int currentlyMatching;
 
-            bufferIndex = 0;
-            memset(buffer, '\0', sizeof(buffer));
+            buffer[bufferIndex] = c;
+            currentlyMatching = getMatchingLexRule(rules, buffer) != NULL;
+
+            if (matchFlag && !currentlyMatching) {
+                buffer[bufferIndex] = '\0';
+                printf("%s -> %s\n", buffer, getMatchingLexRule(rules, buffer)->token);
+
+                bufferIndex = 0;
+                memset(buffer, '\0', sizeof(buffer));
+            }
+            else {
+                ++bufferIndex;
+                c = fgetc(inputFile);
+            }
+
+            matchFlag = currentlyMatching;
         }
-        else {
-            ++bufferIndex;
-            ++stringIndex;
-        }
-
-        matchFlag = currentlyMatching;
-
     }
 
     {
@@ -70,6 +77,8 @@ int main(void) {
     }
 
     arrfree(rules);
+    fclose(inputFile);
+
     return 0;
 }
 
@@ -81,7 +90,7 @@ int matchRegex(const regex_t *regex, const char *string) {
 regex_t *prepareRegex(const char *regexString) {
     char modifiedRegexString[MAX_REGEX_CHARS];
     regex_t *regex = (regex_t *)malloc(sizeof(regex_t));
-    
+
     modifiedRegexString[0] = '^';
 
     {
@@ -117,7 +126,7 @@ LexRule *getMatchingLexRule(LexRule **rules, const char *buffer) {
 }
 
 
-void *freeLexRule(LexRule *rule) {
+void freeLexRule(LexRule *rule) {
     regfree(rule->regex);
     free(rule->regex);
     free(rule);

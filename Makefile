@@ -1,5 +1,5 @@
 all:
-	gcc main.c -ansi
+	gcc main.c -ansi -Wall -Wextra
 
 debug:
-	gcc main.c -ansi -g3
+	gcc main.c -ansi -g3 -Wall -Wextra
