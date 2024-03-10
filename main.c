@@ -1,6 +1,7 @@
 #include <regex.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define STB_DS_IMPLEMENTATION
 #include "stb_ds.h"
@@ -13,7 +14,7 @@ int matchRegex(const regex_t *regex, const char *string);
 regex_t *prepareRegex(const char *regexString);
 
 typedef struct {
-    const char *token;
+    char *token;
     regex_t *regex;
 } LexRule;
 
@@ -21,7 +22,7 @@ LexRule *createLexRule(const char *tokenName, const char *regexString);
 LexRule *getMatchingLexRule(LexRule **rules, const char *buffer);
 void freeLexRule(LexRule *rule);
 
-int main(void) {
+int main(int argc, char **argv) {
     FILE *inputFile;
     FILE *ruleFile;
 
@@ -29,16 +30,21 @@ int main(void) {
     char buffer[BUFFER_SIZE] = {0};
     int bufferIndex = 0;
 
-    inputFile = fopen("input.txt", "r");
-    ruleFile = fopen("rules.txt", "r");
+    if (argc != 3) {
+        fprintf(stderr, "Wrong usage! Sample use: <executable lexer> rules.txt code.txt\n");
+        exit(1);
+    }
+
+    inputFile = fopen(argv[2], "r");
+    ruleFile = fopen(argv[1], "r");
 
     if (!inputFile) {
-        fprintf(stderr, "input.txt not found\n");
+        fprintf(stderr, "%s not found\n", argv[2]);
         exit(1);
     }
 
     if (!ruleFile) {
-        fprintf(stderr, "rules.txt not found\n");
+        fprintf(stderr, "%s not found\n", argv[1]);
         exit(1);
     }
     
@@ -124,7 +130,8 @@ regex_t *prepareRegex(const char *regexString) {
 
 LexRule *createLexRule(const char *tokenName, const char *regexString) {
     LexRule *rule = (LexRule *)malloc(sizeof(LexRule));
-    rule->token = tokenName;
+    rule->token = (char *)malloc(strlen(tokenName) + 1);
+    strcpy(rule->token, tokenName);
     rule->regex = prepareRegex(regexString);
     return rule;
 }
@@ -141,5 +148,6 @@ LexRule *getMatchingLexRule(LexRule **rules, const char *buffer) {
 void freeLexRule(LexRule *rule) {
     regfree(rule->regex);
     free(rule->regex);
+    free(rule->token);
     free(rule);
 }
