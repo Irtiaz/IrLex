@@ -12,7 +12,7 @@ ifeq ($(CC),gcc)
 endif
 
 all:
-	gcc main.c $(_FLAGS) $(_CFLAGS)
+	gcc *.c $(_FLAGS) $(_CFLAGS)
 
 debug:
-	gcc main.c -g3 $(_FLAGS) $(_CFLAGS)
+	gcc *.c -g3 $(_FLAGS) $(_CFLAGS)
