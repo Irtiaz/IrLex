@@ -26,13 +26,14 @@ void freeLexRule(LexRule *rule);
 
 void logTokenLexemePair(FILE *logFile, const char *token, const char *lexeme);
 
+void getNextToken(FILE *inputFile, LexRule **rules, char buffer[BUFFER_SIZE], char *lastReadCharacter, char token[MAX_TOKEN_CHARS], char lexeme[BUFFER_SIZE]);
+
 int main(int argc, char **argv) {
     FILE *inputFile;
     FILE *ruleFile;
 
     LexRule **rules = NULL;
     char buffer[BUFFER_SIZE] = {0};
-    int bufferIndex = 0;
 
     if (argc != 3) {
         fprintf(stderr, "Wrong usage! Sample use: <executable lexer> rules.txt code.txt\n");
@@ -61,37 +62,15 @@ int main(int argc, char **argv) {
     } 
 
     {
-        int matchFlag = 0;
-        char c = fgetc(inputFile);
-        while (c != EOF) {
-            int currentlyMatching;
-
-            buffer[bufferIndex] = c;
-            currentlyMatching = getMatchingLexRule(rules, buffer) != NULL;
-
-            if (matchFlag && !currentlyMatching) {
-                char *token;
-                buffer[bufferIndex] = '\0';
-                token = getMatchingLexRule(rules, buffer)->token;
-                if (strcmp(token, SKIP_TOKEN)) logTokenLexemePair(stdout, token, buffer);
-
-                bufferIndex = 0;
-                memset(buffer, '\0', sizeof(buffer));
-            }
-            else {
-                ++bufferIndex;
-                c = fgetc(inputFile);
-            }
-
-            matchFlag = currentlyMatching;
-        }
+        char lastReadCharacter = fgetc(inputFile);
+        char token[MAX_TOKEN_CHARS];
+        char lexeme[BUFFER_SIZE];
+        do {
+            getNextToken(inputFile, rules, buffer, &lastReadCharacter, token, lexeme);
+            logTokenLexemePair(stdout, token, lexeme);
+        } while (strcmp(token, "$"));
     }
-
-    {
-        LexRule *lastRule = getMatchingLexRule(rules, buffer);
-        if (lastRule && strcmp(lastRule->token, SKIP_TOKEN)) logTokenLexemePair(stdout, lastRule->token, buffer);
-    }
-
+    
     {
         int i;
         for (i = 0; i < arrlen(rules); ++i) {
@@ -104,6 +83,61 @@ int main(int argc, char **argv) {
     fclose(ruleFile);
 
     return 0;
+}
+
+void getNextToken(FILE *inputFile, LexRule **rules, char buffer[BUFFER_SIZE], char *lastReadCharacter, char token[MAX_TOKEN_CHARS], char lexeme[BUFFER_SIZE]) {
+    int matchFlag = 0;
+    int bufferIndex = 0;
+
+    strcpy(token, "garbage");
+    strcpy(lexeme, "garbage");
+
+    if (*lastReadCharacter == EOF) {
+        strcpy(token, "$");
+        strcpy(lexeme, "$");
+        return;
+    }
+
+    while (*lastReadCharacter != EOF) {
+        int currentlyMatching;
+
+        buffer[bufferIndex] = *lastReadCharacter;
+        currentlyMatching = getMatchingLexRule(rules, buffer) != NULL;
+
+        if (matchFlag && !currentlyMatching) {
+            char *matchingToken;
+            buffer[bufferIndex] = '\0';
+            matchingToken = getMatchingLexRule(rules, buffer)->token;
+            if (strcmp(matchingToken, SKIP_TOKEN)) {
+                strcpy(token, matchingToken);
+                strcpy(lexeme, buffer);
+                memset(buffer, '\0', BUFFER_SIZE);
+                return;
+            }
+
+            memset(buffer, '\0', BUFFER_SIZE);
+            bufferIndex = 0;
+        }
+        else {
+            ++bufferIndex;
+            *lastReadCharacter = fgetc(inputFile);
+        }
+
+        matchFlag = currentlyMatching;
+    }
+
+    {
+        LexRule *lastRule = getMatchingLexRule(rules, buffer);
+        if (lastRule && strcmp(lastRule->token, SKIP_TOKEN)) {
+            strcpy(token, lastRule->token);
+            strcpy(lexeme, buffer);
+        }
+        else {
+            strcpy(token, "$");
+            strcpy(lexeme, "$");
+        }
+        return;
+    }
 }
 
 int matchRegex(const regex_t *regex, const char *string) {
